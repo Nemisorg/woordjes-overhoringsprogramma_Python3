@@ -1,6 +1,10 @@
 from os import system, name
 
+import os
+
 from time import sleep
+
+import pathlib
 
 def clear():  
     if name == 'nt': 
@@ -11,6 +15,11 @@ def clear():
 
 def touch(filename):
     filename.extend([".","w","d","l"])
+    i = 0
+    for value in filename:
+        if (value == " "):
+            filename[i] = "_"
+        i = i + 1
     filename = "".join(filename)
     
     if name == 'nt':
@@ -18,6 +27,20 @@ def touch(filename):
  
     else: 
         _ = system('touch' + filename)
+
+def ls(chosen_directory):
+    cd = pathlib.Path(chosen_directory)
+    list = []
+    if 'paths_ls' not in locals():
+        paths_ls = {cd: list}
+    else:
+        if cd in paths_ls.keys():
+            paths_ls[cd] = list
+
+    for currentFile in cd.iterdir():  
+        list.append(currentFile)
+        print(currentFile)
+    print(paths_ls)
 
 def loading():
     laadstr = "Loading"
@@ -34,6 +57,7 @@ def maak():
     clear()
     filename = list(input("Welke bestandsnaam moet de nieuwe woordenlijst krijgen?\n"))
     touch(filename)
+    ls(".")
     
 def verander():
     clear()
