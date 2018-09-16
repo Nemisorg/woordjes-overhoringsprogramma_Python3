@@ -10,18 +10,8 @@ def clear():
         _ = system('clear')
 
 def touch(filename):
-    if("." in filename):
-        i = 0
-        for value in filename:
-            if (value == "."):
-                filename_lastdot = i
-            i = i + 1
-        if (filename_lastdot == 0):
-            filename.extend([".","w","d","l"])
-        filename = "".join(filename)
-    else:
-        filename.extend([".","w","d","l"])
-        filename = "".join(filename)
+    filename.extend([".","w","d","l"])
+    filename = "".join(filename)
     
     if name == 'nt':
         _ = system('type nul > ' + filename) 
