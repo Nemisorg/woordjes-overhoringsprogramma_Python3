@@ -28,19 +28,16 @@ def touch(filename):
     else: 
         _ = system('touch' + filename)
 
-def ls(chosen_directory):
-    cd = pathlib.Path(chosen_directory)
-    list = []
-    if 'paths_ls' not in locals():
-        paths_ls = {cd: list}
+def ls(cd,cdabsolute):
+    cdloop = pathlib.Path(cd)
+    if 'paths_ls' not in globals():
+        global paths_ls
+        paths_ls = {cdabsolute: []}
     else:
-        if cd in paths_ls.keys():
-            paths_ls[cd] = list
+        paths_ls[cdabsolute] = []
 
-    for currentFile in cd.iterdir():  
-        list.append(currentFile)
-        print(currentFile)
-    print(paths_ls)
+    for cf in cdloop.iterdir():
+        paths_ls[cdabsolute].append(str(cf))
 
 def loading():
     laadstr = "Loading"
@@ -50,14 +47,13 @@ def loading():
         laadstr = laadstr + "."
         if (laadstr == "Loading...."):
             laadstr = "Loading"
-        sleep(0.5)
-    sleep(1)
+        sleep(0.25)
+    sleep(0.5)
 
 def maak():
     clear()
     filename = list(input("Welke bestandsnaam moet de nieuwe woordenlijst krijgen?\n"))
     touch(filename)
-    ls(".")
     
 def verander():
     clear()
@@ -92,7 +88,7 @@ def menu():
     
 
 def main():
-    #loading()
+    loading()
     menu()
 
 main()
