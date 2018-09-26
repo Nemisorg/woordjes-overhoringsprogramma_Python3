@@ -1,40 +1,45 @@
 from os import system, name
-
 import os
-
 from time import sleep
-
 import pathlib
 
+paths_ls = {}
+wdl_list = [".","w","d","l"]
+
 def clear():  
-    if name == 'nt': 
+    if name == 'nt':  
         _ = system('cls') 
- 
     else: 
         _ = system('clear')
 
-def touch(filename):
-    filename.extend([".","w","d","l"])
+def characterfix(filename):
     i = 0
     for value in filename:
         if value == " ":
             filename[i] = "_"
-        i = i + 1
+        elif value == "<" or value == ">" or value == ":" or value == '"' or value == "/" or value == "\\" or value == "|" or value == "?" or value == "*":
+            filename[i] = ""
+        i += 1
     filename = "".join(filename)
-    
-    if name == 'nt':
-        _ = system('type nul > ' + filename) 
- 
-    else: 
-        _ = system('touch ' + filename)
+
+    return filename
+
+def confirmoverwrite(filename):
+    if os.path.isfile(filename) == True:
+        overwrite = 0
+        while overwrite not in ["A", "O"]:
+                overwrite = input("Het bestand dat u wilt maken bestaat al, \nwilt u het overschrijven (O) of een andere bestandsnaam kiezen (A)?: ")
+                overwrite = overwrite.title()
+        while overwrite == "A" and os.path.isfile(filename) == True:
+            filename = list(input("Welke bestandsnaam moet de nieuwe woordenlijst krijgen?: "))
+            filename.extend([".","w","d","l"])
+            filename = "".join(filename)
+
+    return filename
 
 def ls(cd,cdabsolute):
     cdloop = pathlib.Path(cd)
-    if 'paths_ls' not in globals():
-        global paths_ls
-        paths_ls = {cdabsolute: []}
-    else:
-        paths_ls[cdabsolute] = []
+    paths_ls[cdabsolute] = []
 
     for cf in cdloop.iterdir():
         paths_ls[cdabsolute].append(str(cf))
@@ -42,29 +47,37 @@ def ls(cd,cdabsolute):
 def rm(filedirname):
     if name == 'nt':
         _ = system('del /F /Q ' + filedirname)
-        print("del " + filedirname)
- 
     else: 
         _ = system('rm -rf ' + filedirname)
-        print("del " + filedirname)
 
-def loading():
-    laadstr = "Loading"
-    for number in range(0,8):
-        clear()
-        print(laadstr)
-        laadstr = laadstr + "."
-        if laadstr == "Loading....":
-            laadstr = "Loading"
-        sleep(0.25)
-    sleep(0.5)
+def cp(oldpath,newpath):
+    if name == 'nt':
+        _ = system('copy /Y ' + oldpath + " " + newpath)
+    else: 
+        _ = system('cp -r ' + oldpath + " " + newpath)
 
 def maak():
+    filename = list(input("Welke bestandsnaam moet de nieuwe woordenlijst krijgen? '/cancel' om te annuleren: "))
+    while len(filename) == 0:
+        clear()
+        filename = list(input("Welke bestandsnaam moet de nieuwe woordenlijst krijgen? '/cancel' om te annuleren: "))
+    filename.extend([".","w","d","l"])
+
+    if "".join(filename) == "/cancel.wdl":
+        return 0
+    
+    filename = characterfix(filename)
+    filename = confirmoverwrite(filename)
+
+    cp(filename, filename + "cache")
     clear()
-    filename = list(input("Welke bestandsnaam moet de nieuwe woordenlijst krijgen?: "))
-    touch(filename)
+    
     print("'/save' om de lijst op te slaan en te stoppen \n'/stop' om te stoppen")
-    filename = "".join(filename)
+    # open file
+    # woord = input("Voer een woord in: ")
+    # while woord != "stop"
+    #   doe je ding
+    #   woord = input("Voer een woord in: ")
     with open(filename, "w") as currentwdl:
         while True:
             woord = input("Voer een woord in: ")
@@ -74,7 +87,7 @@ def maak():
             elif woord == "/stop":
                 delete = True
                 break
-            currentwdl.write(woord + "\n")
+
             ans = input("Voer de betekenis / vertaling van " + woord + " in: ")
             if ans == "/save":
                 delete = False
@@ -82,45 +95,68 @@ def maak():
             elif ans == "/stop":
                 delete = True
                 break
-            currentwdl.write(ans + "\n")
+            currentwdl.write(woord + "=" + ans + "\n")
+
     if delete == True:
         rm(filename)
-    menu()
+        cp(filename + "cache", filename)
+        rm(filename + "cache")
+    else:
+        rm(filename + "cache")
+        if os.stat(filename).st_size == 0:
+            rm(filename)
+
+def verwijder():
+    cancel = 0
+    while cancel != True:
+        ls(".",os.getcwd())
+        for filedirs in paths_ls[os.getcwd()]:
+            if filedirs.endswith(".wdl"):
+                cancel = cancel + 1
     
-def verander():
-    clear()
-    print("Verander")
+        if cancel == 0:
+            clear()
+            print("Geen bestanden om te verwijderen...")
+            sleep(1)
+            return 0
 
-def add():
-    clear()
-    print("Add")
+        cancel = False
+        delete = ""
+        while delete not in paths_ls[os.getcwd()]:
+            ls(".",os.getcwd())
+            for filedirs in paths_ls[os.getcwd()]:
+                if filedirs.endswith(".wdl"):
+                    print(filedirs[:-4])
+            delete = input("Welk bestand had u gewenst te verwijderen? '/cancel' om te annuleren: ")
+            delete = delete + ".wdl"
+            clear()
+            if delete == "/cancel.wdl":
+                return 0
 
-def overhoor():
-    clear()
-    print("Overhoor")
+        rm(delete)
+        print("Bestand succesvol verwijderd...")
+        sleep(1)
+
 
 def menu():
-    clear()
-    actie = input("Wat wilt u doen?:\nMaak een nieuwe woordenlijst (M)\nVerander een bestaande woordenlijst (V)\nVoeg woorden toe aan een bestaande woordenlijst (A)\nOverhoor een woordenlijst (O)\nStop het programma (S)\n\n")
-    actie = actie.title()
-    if actie == "M":
-        maak()
-    elif actie == "V":
-        verander()
-    elif actie == "A":
-        add()
-    elif actie == "O":
-        overhoor()
-    elif actie == "S":
-        exit()
-    else:
+    actie = ""
+    while actie != "S":
         clear()
-        menu()
+        actie = input("Wat wilt u doen?:\nMaak een nieuwe woordenlijst (M)\nVerander een bestaande woordenlijst (V)\nVoeg woorden toe aan een bestaande woordenlijst (A)\nOverhoor een woordenlijst (O)\nVerwijder een woordenlijst (R)\nStop het programma (S)\n\n")
+        actie = actie.title()
+        clear()
+        # while actie != "S":
+        #   doe iets
+        #   actie = input("")
+        if actie == "M":
+            maak()
+        #elif actie == "V":
+        #    verander()
+        #elif actie == "A":
+        #    voeg_toe()
+        #elif actie == "O":
+        #    overhoor()
+        elif actie == "R":
+            verwijder()
 
-    
-
-def main():
-    loading()
-    menu()
-
-main()
+menu()
