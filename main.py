@@ -5,7 +5,7 @@ import pathlib
 import re
 
 paths_ls = {}
-wdl_list = [".","w","d","l"]
+cached_lists = {}
 
 def clear():  
     if name == 'nt':  
@@ -15,11 +15,15 @@ def clear():
 
 def characterfix(filename):
     filename.replace(" ", "_")
-    while bool(re.match("^\w+$",filename)) == False:
+
+    while bool(re.match("^\w.+$",filename)) == False:
         clear()
+        
         filename = input("'" + filename + "' is geen correcte bestandsnaam. Voer een andere bestandsnaam in, '/cancel' om te annuleren: ")
+        
         if filename == "/cancel":
             return filename
+    
     return filename
 
 def confirmoverwrite(filename):
@@ -27,15 +31,22 @@ def confirmoverwrite(filename):
         overwrite = ""
         while overwrite not in ["A", "O"]:
             clear()
+            
             overwrite = input("Het bestand dat u wilt maken bestaat al, \nwilt u het overschrijven (O) of een andere bestandsnaam kiezen (A)? '/cancel' om te annuleren: ")
+            
             if overwrite == "/cancel":
                 return overwrite
+            
             overwrite = overwrite.title()
+
         while overwrite == "A" and os.path.isfile(filename) == True:
             clear()
+
             filename = input("Welke bestandsnaam moet de nieuwe woordenlijst krijgen? '/cancel' om te annuleren: ")
+            
             if filename == "/cancel":
                 return filename
+            
             filename = characterfix(filename)
             filename = filename + ".wdl"
 
@@ -61,25 +72,47 @@ def cp(oldpath,newpath):
         _ = system('cp -r ' + oldpath + " " + newpath)
 
 def maak():
-    filename = ""
     filename = input("Welke bestandsnaam moet de nieuwe woordenlijst krijgen? '/cancel' om te annuleren: ")
     if filename == "/cancel":
         return
-    filename = characterfix(filename)
     
+    filename = characterfix(filename)
     if filename == "/cancel":
         return
     
     filename = filename + ".wdl"
     filename = confirmoverwrite(filename)
-
     if filename == "/cancel":
         return
 
     cp(filename, filename + "cache")
+    
     clear()
     
+    cached_lists[filename] = {}
     print("'/save' om de lijst op te slaan en te stoppen \n'/stop' om te stoppen")
+    while True:
+        woord = input("Voer een woord in: ")
+        if woord == "/save":
+            delete = False
+            break
+        elif woord == "/stop":
+            delete = True
+            break
+
+        ans = input("Voer de betekenis / vertaling van " + woord + " in: ")
+        if ans == "/save":
+            delete = False
+            break
+        elif ans == "/stop":
+            delete = True
+            break
+        cached_lists[filename][woord] = ans
+
+    with open(filename, "w") as currentwdl:
+        for woord,ans in cached_lists[filename].items():
+            currentwdl.write(woord + "=" + ans)
+    '''
     with open(filename, "w") as currentwdl:
         while True:
             woord = input("Voer een woord in: ")
@@ -98,6 +131,7 @@ def maak():
                 delete = True
                 break
             currentwdl.write(woord + "=" + ans + "\n")
+        '''
 
     if delete == True:
         rm(filename)
