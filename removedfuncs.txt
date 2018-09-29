@@ -18,7 +18,7 @@ def touch(filename):
     return filename
 '''
 
-####################################################################################################
+##################################################
 
 '''
 def loading():
@@ -34,3 +34,36 @@ def loading():
     
     sleep(0.5)
 '''
+
+########################################################
+
+'''
+def cp(oldpath,newpath):
+    if name == 'nt':
+        _ = system('copy /Y ' + oldpath + " " + newpath)
+    else: 
+        _ = system('cp -r ' + oldpath + " " + newpath)
+'''
+
+########################################################################
+
+    '''
+    with open(filename, "w") as currentwdl:
+        while True:
+            woord = input("Voer een woord in: ")
+            if woord == "/save":
+                delete = False
+                break
+            elif woord == "/stop":
+                delete = True
+                break
+
+            ans = input("Voer de betekenis / vertaling van " + woord + " in: ")
+            if ans == "/save":
+                delete = False
+                break
+            elif ans == "/stop":
+                delete = True
+                break
+            currentwdl.write(woord + "=" + ans + "\n")
+    '''

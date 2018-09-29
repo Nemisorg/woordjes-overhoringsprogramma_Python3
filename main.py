@@ -1,8 +1,8 @@
-from os import system, name
+from os import system, name, getcwd, stat
 import os
 from time import sleep
-import pathlib
-import re
+from pathlib import Path
+from re import match
 
 paths_ls = {}
 cached_lists = {}
@@ -16,7 +16,7 @@ def clear():
 def characterfix(filename):
     filename.replace(" ", "_")
 
-    while bool(re.match("^\w.+$",filename)) == False:
+    while bool(match("^\w.+$",filename)) == False:
         clear()
         
         filename = input("'" + filename + "' is geen correcte bestandsnaam. Voer een andere bestandsnaam in, '/cancel' om te annuleren: ")
@@ -53,7 +53,7 @@ def confirmoverwrite(filename):
     return filename
 
 def ls(cd,cdabsolute):
-    cdloop = pathlib.Path(cd)
+    cdloop = Path(cd)
     paths_ls[cdabsolute] = []
 
     for cf in cdloop.iterdir():
@@ -64,12 +64,6 @@ def rm(filedirname):
         _ = system('del /F /Q ' + filedirname)
     else: 
         _ = system('rm -rf ' + filedirname)
-
-def cp(oldpath,newpath):
-    if name == 'nt':
-        _ = system('copy /Y ' + oldpath + " " + newpath)
-    else: 
-        _ = system('cp -r ' + oldpath + " " + newpath)
 
 def maak():
     filename = input("Welke bestandsnaam moet de nieuwe woordenlijst krijgen? '/cancel' om te annuleren: ")
@@ -84,8 +78,6 @@ def maak():
     filename = confirmoverwrite(filename)
     if filename == "/cancel":
         return
-
-    cp(filename, filename + "cache")
     
     clear()
     
@@ -109,44 +101,20 @@ def maak():
             break
         cached_lists[filename][woord] = ans
 
-    with open(filename, "w") as currentwdl:
-        for woord,ans in cached_lists[filename].items():
-            currentwdl.write(woord + "=" + ans)
-    '''
-    with open(filename, "w") as currentwdl:
-        while True:
-            woord = input("Voer een woord in: ")
-            if woord == "/save":
-                delete = False
-                break
-            elif woord == "/stop":
-                delete = True
-                break
+    
 
-            ans = input("Voer de betekenis / vertaling van " + woord + " in: ")
-            if ans == "/save":
-                delete = False
-                break
-            elif ans == "/stop":
-                delete = True
-                break
-            currentwdl.write(woord + "=" + ans + "\n")
-        '''
-
-    if delete == True:
-        rm(filename)
-        cp(filename + "cache", filename)
-        rm(filename + "cache")
-    else:
-        rm(filename + "cache")
-        if os.stat(filename).st_size == 0:
+    if delete == False:
+        with open(filename, "w") as currentwdl:
+            for woord,ans in cached_lists[filename].items():
+                currentwdl.write(woord + "=" + ans + "\n")
+        if stat(filename).st_size == 0:
             rm(filename)
 
 def verwijder():
     cancel = 0
     while cancel != True:
-        ls(".",os.getcwd())
-        for filedirs in paths_ls[os.getcwd()]:
+        ls(".",getcwd())
+        for filedirs in paths_ls[getcwd()]:
             if filedirs.endswith(".wdl"):
                 cancel = cancel + 1
     
@@ -159,9 +127,9 @@ def verwijder():
         clear()
         cancel = False
         delete = ""
-        while delete not in paths_ls[os.getcwd()]:
-            ls(".",os.getcwd())
-            for filedirs in paths_ls[os.getcwd()]:
+        while delete not in paths_ls[getcwd()]:
+            ls(".",getcwd())
+            for filedirs in paths_ls[getcwd()]:
                 if filedirs.endswith(".wdl"):
                     print(filedirs[:-4])
             delete = input("Welk bestand had u gewenst te verwijderen? '/cancel' om te annuleren: ")
