@@ -5,7 +5,6 @@ from pathlib import Path
 from re import match
 
 paths_ls = {}
-cached_lists = {}
 
 def clear():  
     if name == 'nt':  
@@ -65,6 +64,13 @@ def rm(filedirname):
     else: 
         _ = system('rm -rf ' + filedirname)
 
+def is_number(value):
+    try:
+        int(value)
+        return True
+    except ValueError:
+        return False
+
 def maak():
     filename = input("Welke bestandsnaam moet de nieuwe woordenlijst krijgen? '/cancel' om te annuleren: ")
     if filename == "/cancel":
@@ -81,10 +87,12 @@ def maak():
     
     clear()
     
-    cached_lists[filename] = {}
+    writetofile = {}
     print("'/save' om de lijst op te slaan en te stoppen \n'/stop' om te stoppen")
     while True:
-        woord = input("Voer een woord in: ")
+        woord = ""
+        while woord == "" or "=" in woord:
+            woord = input("Voer een woord in: ")
         if woord == "/save":
             delete = False
             break
@@ -92,27 +100,99 @@ def maak():
             delete = True
             break
 
-        ans = input("Voer de betekenis / vertaling van " + woord + " in: ")
+        ans = ""
+        while ans == "" or "=" in ans:
+            ans = input("Voer de betekenis / vertaling van " + woord + " in: ")
         if ans == "/save":
             delete = False
             break
         elif ans == "/stop":
             delete = True
             break
-        cached_lists[filename][woord] = ans
+        writetofile[woord] = ans
 
     
 
     if delete == False:
         with open(filename, "w") as currentwdl:
-            for woord,ans in cached_lists[filename].items():
+            for woord,ans in writetofile.items():
                 currentwdl.write(woord + "=" + ans + "\n")
         if stat(filename).st_size == 0:
             rm(filename)
 
+def verander():
+    cancel = 0
+    while True:
+        ls(".",getcwd())
+        for filedirs in paths_ls[getcwd()]:
+            if filedirs.endswith(".wdl"):
+                cancel = cancel + 1
+    
+        if cancel == 0:
+            clear()
+            print("Geen bestanden om te veranderen...")
+            sleep(1)
+            return
+
+        clear()
+        cancel = False
+        verander = ""
+        while verander not in paths_ls[getcwd()]:
+            ls(".",getcwd())
+            for filedirs in paths_ls[getcwd()]:
+                if filedirs.endswith(".wdl"):
+                    print(filedirs[:-4])
+            verander = input("Welk bestand had u gewenst te veranderen? '/cancel' om te annuleren: ")
+
+            if verander == "/cancel":
+                return
+
+            verander = characterfix(verander)
+
+            if verander == "/cancel":
+                return
+
+            verander = verander + ".wdl"
+            clear()
+        while True:
+            currentwdl = open(verander)
+            clear()
+            linenumber = 0
+            currentline = ""
+            all_lines = {}
+            for currentline in currentwdl:
+                linenumber = linenumber + 1
+                print(str(linenumber) + " " + currentline , end = '')
+                all_lines[linenumber] = currentline
+            changeline = input("\n\nWelke lijn moet veranderd worden? '/cancel' om te stoppen:... ")
+            if changeline == "/cancel":
+                currentwdl.close()
+                return
+            nummercorrect = is_number(changeline)
+            if nummercorrect == True:
+                changeline = int(changeline)
+                if changeline > 0 and changeline <= linenumber:
+                    print("'/stop' om de bewerking te negeren")
+                    woord = ""
+                    while woord == "" or "=" in woord:
+                        woord = input("Voer een woord in: ")
+
+                    ans = ""
+                    while ans == "" or "=" in ans:
+                        ans = input("Voer de betekenis / vertaling van " + woord + " in: ")
+                    ans = ans + "\n"
+
+                    if woord != "/stop" and ans != "/stop":
+                        all_lines[changeline] = woord + "=" + ans
+                        currentwdl.close()
+                        currentwdl = open(verander, "w")
+                        for line, value in all_lines.items():
+                            currentwdl.write(value)
+            currentwdl.close()
+
 def verwijder():
     cancel = 0
-    while cancel != True:
+    while True:
         ls(".",getcwd())
         for filedirs in paths_ls[getcwd()]:
             if filedirs.endswith(".wdl"):
@@ -165,8 +245,8 @@ def menu():
         clear()
         if actie == "M":
             maak()
-        #elif actie == "V":
-        #    verander()
+        elif actie == "V":
+            verander()
         #elif actie == "A":
         #    voeg_toe()
         #elif actie == "O":
