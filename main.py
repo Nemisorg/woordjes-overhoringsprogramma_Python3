@@ -52,6 +52,7 @@ def confirmoverwrite(filename):
         while overwrite not in ["A", "O"]:
             clear()
             
+            print(filename)
             overwrite = input("Het bestand dat u wilt maken bestaat al, \nwilt u het overschrijven (O) of een andere bestandsnaam kiezen (A)? '/cancel' om te annuleren: ")
             if overwrite == "/cancel":
                 return overwrite
@@ -321,7 +322,10 @@ def importwdl():
     if confirmimport == "Y" or confirmimport == "":
         for fullpath, filename in filesforimport.items():
             filename = confirmoverwrite(filename)
+            if filename == "/cancel":
+                break
             copy2(fullpath, filename)
+            rm(fullpath)
 
 def verwijder():
     cancel = 0
