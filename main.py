@@ -34,7 +34,7 @@ wilt u het overschrijven (O) of een andere bestandsnaam kiezen (A)? ",
 
     "ask_word_translated": "Wat is de vertaling van '{}' in het {}: ",
 
-    "line_to_change": "Welke lijn moet veranderd worden? ",
+    "line_to_change": "Welke regel moet veranderd worden? /S om te stoppen: ",
 
     "ask_wich_list_file": "Welk bestand wilt u gebruiken voor de gekozen actie? ",
 
@@ -189,6 +189,35 @@ def import_lines(open_file):
     del all_lines[0]
     return all_lines, first_language, second_language
 
+def print_all_lines(all_lines):
+    clear()
+    line_number = 1
+    for line in all_lines:
+        print(str(line_number) + ": " + line)
+        line_number += 1
+
+def ask_line_to_change(all_lines):
+    line_to_change = input(MESSAGES["line_to_change"])
+    if line_to_change.title() == "/S":
+        return line_to_change.title()
+    line_to_change = int(line_to_change)
+    while line_to_change not in range(1, len(all_lines) + 1):
+        line_to_change = input(MESSAGES["line_to_change"])
+        if line_to_change.title() == "/S":
+            return line_to_change.title()
+        line_to_change = int(line_to_change)
+    return line_to_change - 1
+
+def write_new_line(all_lines, line_to_change, open_file, first_language, second_language):
+    open_file.write(first_language + "=" + second_language + "\n")
+    line_number = 0
+    for line in all_lines:
+        if line_number == line_to_change:
+            ask_words(open_file, first_language, second_language)
+        else:
+            open_file.write(line + "\n")
+        line_number += 1
+
 def ask_language_order(first_language, second_language):
     order = ""
     while order not in ("1", "2"):
@@ -244,27 +273,17 @@ def make_list():
 
 def change_list():
     list_file = ask_wich_list_file()
-    open_file = open(list_file)
-    all_lines, first_language, second_language = import_lines(open_file)
-    open_file.close()
-    line_number = 1
-    clear()
-    for line in all_lines:
-        print(str(line_number) + ": " + line)
-        line_number += 1
-    line_to_change = int(input(MESSAGES["line_to_change"]))
-    while line_to_change not in range(1, len(all_lines)):
-        line_to_change = input(MESSAGES["line_to_change"])
-    line_to_change -= 1
-    line_number = -1
-    open_file = open(list_file, "w")
-    for line in all_lines:
-        line_number += 1
-        if line_number == line_to_change:
-            ask_words(open_file, first_language, second_language)
-        else:
-            open_file.write(line + "\n")
-    open_file.close()
+    while True:
+        open_file = open(list_file)
+        all_lines, first_language, second_language = import_lines(open_file)
+        open_file.close()
+        print_all_lines(all_lines)
+        line_to_change = ask_line_to_change(all_lines)
+        if line_to_change == "/S":
+            break
+        open_file = open(list_file, "w")
+        write_new_line(all_lines, line_to_change, open_file, first_language, second_language)
+        open_file.close()
 
 def learn_list():
     list_file = ask_wich_list_file()
@@ -275,9 +294,11 @@ def learn_list():
 
 def remove_list():
     list_file = ask_wich_list_file()
+    clear()
     confirm_delete = input(MESSAGES["confirm_delete"].format(list_file[:-4]))
     if confirm_delete.title() in ("", "Y"):
         rm(list_file)
+        clear()
         print(MESSAGES["file_delete_exit_0"])
         time.sleep(1)
 
@@ -292,3 +313,5 @@ except KeyboardInterrupt:
         exit(0)
     except SystemExit:
         os._exit(0)
+clear()
+print('\nExited with exit code 0')
