@@ -1,11 +1,19 @@
 # Imports
-import os, re, pathlib, random, time
+import os, re, pathlib, random, time, fnmatch, shutil
 
 
 # Variables
+open_file = open("main.conf")
+for line in open_file:
+    sleep_time = line
+open_file.close()
+sleep_time = float(sleep_time)
+
 ACTIONS = {
-    "menu_actions": ("M", "V", "T", "O", "I", "R", "S"),
+    "menu_actions": ("M", "V", "T", "O", "I", "R", "C", "S"),
     "existing_file_handling_actions": ("A", "O"),
+    "yes_no":  ("", "Y"),
+    "1-2": ("1", "2")
 }
 
 MESSAGES = {
@@ -16,14 +24,15 @@ Voeg woorden / zinnen toe aan een bestaande lijst (T) \n\
 Overhoor een lijst (O) \n\
 Import lijsten (I) \n\
 Verwijder een lijst (R) \n\
+Verander de configuratie van het programma (C) \n\
 Stop het programma (S) \n\n",
 
-    "ask_filename": "Welke bestandsnaam moet het nieuwe bestand krijgen? ",
+    "ask_filename": "Welke naam moet de nieuwe lijst krijgen? ",
 
     "ask_corrected_filename": "'{}' is geen correcte bestandsnaam. \
 Voer een andere bestandsnaam in: ",
 
-    "ask_existing_file_handling": "Het bestand dat u wilt maken bestaat al, \n\
+    "ask_existing_file_handling": "De lijst dat u wilt maken bestaat al, \n\
 wilt u het overschrijven (O) of een andere bestandsnaam kiezen (A)? ",
 
     "ask_first_language": "Wat is de eerste taal? ",
@@ -36,29 +45,37 @@ wilt u het overschrijven (O) of een andere bestandsnaam kiezen (A)? ",
 
     "line_to_change": "Welke regel moet veranderd worden? /S om te stoppen: ",
 
-    "ask_wich_list_file": "Welk bestand wilt u gebruiken voor de gekozen actie? ",
+    "ask_wich_list_file": "Welke lijst wilt u gebruiken voor de gekozen actie? ",
 
     "ask_language_order": "Hoe wilt u de lijst overhoren? ",
 
-    "wrong": "Fout, het juiste antwoord was '{}'.",
+    "wrong": "Fout, het juiste antwoord was '{}'. ",
 
-    "keep_it_up": "Ga zo door!",
+    "keep_it_up": "Ga zo door! ",
 
-    "confirm_delete": "Weet u zeker dat u '{}' wilt verwijderen? [Y/n] ",
+    "ask_import_action_confirm": "Weet u zeker dat u alle woordenlijsten uit uw gebruikers map wilt importeren? \n\
+De lijsten zullen worden verplaatst naar de map van het programma. Deze actie kan een lange tijd duren. [Y/n]: ",
 
-    "file_delete_exit_0": "Het bestand is succesvol verwijderd. "
+    "no_files_found": "Geen lijsten gevonden. ",
+
+    "importing_lists": "Lijsten aan het zoeken ... ",
+
+    "import_succes": "Alle lijsten zijn succesvol geïmporteerd. ",
+
+    "ask_sleep_time": "Hoe lang moet het juiste antwoord getoond worden in seconden? ",
+
+    "confirm_delete": "Weet u zeker dat u '{}' wilt verwijderen? [Y/n]: ",
+
+    "file_delete_exit_0": "De lijst is succesvol verwijderd. "
 }
 
 
 # System functions
-def oscheck(ntcmd, othercmd):
-    if os.name == 'nt':
-        exec(ntcmd)
-    else: 
-        exec(othercmd)
-
 def clear():
-    oscheck("os.system('cls')", "os.system('clear')")
+    if os.name == 'nt':
+        os.system('cls')
+    else: 
+        os.system('clear')
 
 def ls(cd,cdabsolute):
     paths_ls = []
@@ -68,11 +85,11 @@ def ls(cd,cdabsolute):
         paths_ls.append(str(cf))
     return paths_ls
 
-def any_key():
-    oscheck("pause", """bash -c 'read -s -n 1 -p "Press any key to continue . . . "'""")
-
 def rm(list_file):
-    oscheck("os.system('del /F /Q {}')".format(list_file), "os.system('rm -rf {}')".format(list_file))
+    if os.name == 'nt':
+        os.system('del /F /Q ' + '"' + list_file + '"')
+    else: 
+        os.system('rm -rf ' + '"' + list_file + '"')
 
 
 # Subfunctions
@@ -93,15 +110,15 @@ def execute_menu_action(menu_action):
     elif menu_action == "V":
         change_list()
     elif menu_action == "T":
-        pass
+        add_to_list()
     elif menu_action == "O":
         learn_list()
     elif menu_action == "I":
-        pass
+        import_lists()
     elif menu_action == "R":
         remove_list()
     elif menu_action == "C":
-        pass
+        config_change()
 
 def ask_filename():
     clear()
@@ -149,13 +166,11 @@ def ask_languages(open_file):
     return first_language, second_language
 
 def ask_words(open_file, first_language, second_language):
-    clear()
     first_word = input(MESSAGES["ask_word_nontranslated"].format(first_language))
     if first_word.title() == "/S":
         return first_word.title()
     elif "=" in first_word or first_word == "":
         return
-    clear()
     second_word = input(MESSAGES["ask_word_translated"].format(first_word, second_language))
     if "=" in second_word or second_word == "":
         return
@@ -163,14 +178,20 @@ def ask_words(open_file, first_language, second_language):
 
 def print_list_files():
     paths_ls = ls(".", os.getcwd())
+    counter = 0
     for file_dir in paths_ls:
         if file_dir.endswith(".wdl"):
             print(file_dir[:-4])
-    return paths_ls
+            counter += 1
+    return paths_ls, counter
         
 def ask_wich_list_file():
     clear()
-    paths_ls = print_list_files()
+    paths_ls, counter = print_list_files()
+    if counter == 0:
+        print(MESSAGES["no_files_found"])
+        time.sleep(1)
+        return "/S"
     list_file = input(MESSAGES["ask_wich_list_file"])
     list_file += ".wdl"
     while list_file not in paths_ls:
@@ -208,19 +229,25 @@ def ask_line_to_change(all_lines):
         line_to_change = int(line_to_change)
     return line_to_change - 1
 
-def write_new_line(all_lines, line_to_change, open_file, first_language, second_language):
+def replace_line(all_lines, line_to_change, open_file, first_language, second_language):
     open_file.write(first_language + "=" + second_language + "\n")
     line_number = 0
     for line in all_lines:
         if line_number == line_to_change:
+            clear()
             ask_words(open_file, first_language, second_language)
         else:
             open_file.write(line + "\n")
         line_number += 1
 
+def write_old_lines(all_lines, open_file, first_language, second_language):
+    open_file.write(first_language + "=" + second_language + "\n")
+    for line in all_lines:
+        open_file.write(line + "\n")
+
 def ask_language_order(first_language, second_language):
     order = ""
-    while order not in ("1", "2"):
+    while order not in ACTIONS["1-2"]:
         clear()
         print("1: " + first_language + " naar " + second_language)
         print("2: " + second_language + " naar " + first_language)
@@ -252,7 +279,20 @@ def ask_meanings(all_lines, language_to_ask, reverse_ask):
             asked_meanings.append(line)
         else:
             print(MESSAGES["wrong"].format(answer))
-            time.sleep(2.5)
+            time.sleep(sleep_time)
+
+def search_lists(pattern, path):
+    result = {}
+    for root, _, files in os.walk(path):
+        for name in files:
+            if fnmatch.fnmatch(name, pattern) and root != os.getcwd():
+                result[os.path.join(root, name)] = name
+    return result
+
+def move_import_files(lists):
+    for path, filename in lists.items():
+        shutil.copy2(path, filename)
+        rm(path)
     
 
 # Main functions
@@ -266,13 +306,17 @@ def make_list():
     filename = make_filename()
     open_file = open(filename, "w")
     first_language, second_language = ask_languages(open_file)
+    clear()
     when_to_break = ask_words(open_file, first_language, second_language)
     while when_to_break != "/S":
+        clear()
         when_to_break = ask_words(open_file, first_language, second_language)
     open_file.close()
 
 def change_list():
     list_file = ask_wich_list_file()
+    if list_file == "/S":
+        return
     while True:
         open_file = open(list_file)
         all_lines, first_language, second_language = import_lines(open_file)
@@ -282,25 +326,70 @@ def change_list():
         if line_to_change == "/S":
             break
         open_file = open(list_file, "w")
-        write_new_line(all_lines, line_to_change, open_file, first_language, second_language)
+        replace_line(all_lines, line_to_change, open_file, first_language, second_language)
+        open_file.close()
+
+def add_to_list():
+    list_file = ask_wich_list_file()
+    if list_file == "/S":
+        return
+    s_to_stop = ""
+    while s_to_stop != "/S":
+        open_file = open(list_file)
+        all_lines, first_language, second_language = import_lines(open_file)
+        open_file.close()
+        print_all_lines(all_lines)
+        open_file = open(list_file, "w")
+        write_old_lines(all_lines, open_file, first_language, second_language)
+        s_to_stop = ask_words(open_file, first_language, second_language)
         open_file.close()
 
 def learn_list():
     list_file = ask_wich_list_file()
+    if list_file == "/S":
+        return
     open_file = open(list_file)
     all_lines, first_language, second_language = import_lines(open_file)
     language_to_ask, reverse_ask = ask_language_order(first_language, second_language)
     ask_meanings(all_lines, language_to_ask, reverse_ask)
 
+def import_lists():
+    clear()
+    confirm_import_action = input(MESSAGES["ask_import_action_confirm"]).title()
+    if confirm_import_action not in ACTIONS["yes_no"]:
+        return
+    clear()
+    print(MESSAGES["importing_lists"])
+    lists = search_lists("*.wdl", os.path.expanduser("~"))
+    clear()
+    if len(lists) == 0:
+        print(MESSAGES["no_files_found"])
+        time.sleep(1)
+        return
+    move_import_files(lists)
+    print(MESSAGES["import_succes"])
+    time.sleep(1)
+
 def remove_list():
     list_file = ask_wich_list_file()
+    if list_file == "/S":
+        return
     clear()
     confirm_delete = input(MESSAGES["confirm_delete"].format(list_file[:-4]))
-    if confirm_delete.title() in ("", "Y"):
+    if confirm_delete.title() in ACTIONS["yes_no"]:
         rm(list_file)
         clear()
         print(MESSAGES["file_delete_exit_0"])
         time.sleep(1)
+
+def config_change():
+    clear()
+    global sleep_time
+    sleep_time = input(MESSAGES["ask_sleep_time"])
+    open_file = open("main.conf", "w")
+    open_file.write(sleep_time)
+    open_file.close()
+    sleep_time = float(sleep_time)
 
 
 # Start execute
