@@ -66,7 +66,9 @@ De lijsten zullen worden verplaatst naar de map van het programma. Deze actie ka
 
     "confirm_delete": "Weet u zeker dat u '{}' wilt verwijderen? [Y/n]: ",
 
-    "file_delete_exit_0": "De lijst is succesvol verwijderd. "
+    "file_delete_exit_0": "De lijst is succesvol verwijderd. ",
+
+    "program_exit": "Exited with exit code 0"
 }
 
 
@@ -385,6 +387,7 @@ def remove_list():
 def config_change():
     clear()
     global sleep_time
+    print("Huidig: " + str(sleep_time) + " seconden")
     sleep_time = input(MESSAGES["ask_sleep_time"])
     open_file = open("main.conf", "w")
     open_file.write(sleep_time)
@@ -397,10 +400,10 @@ try:
     main()
 except KeyboardInterrupt:
     clear()
-    print('\nExited with exit code 0')
+    print(MESSAGES["program_exit"])
     try:
         exit(0)
     except SystemExit:
         os._exit(0)
 clear()
-print('\nExited with exit code 0')
+print(MESSAGES["program_exit"])
