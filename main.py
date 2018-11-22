@@ -156,7 +156,8 @@ def make_filename():
         existing_file_handling_action, filename = ask_nonexisting_filename(filename)
     return filename
 
-def ask_languages(open_file):
+def ask_languages(filename):
+    open_file = open(filename, "w")
     clear()
     first_language = input(MESSAGES["ask_first_language"])
     while "=" in first_language or first_language == "":
@@ -165,7 +166,7 @@ def ask_languages(open_file):
     while "=" in second_language or second_language == "":
         second_language = input(MESSAGES["ask_second_language"])
     open_file.write(first_language + "=" + second_language + "\n")
-    return first_language, second_language
+    return first_language, second_language, open_file
 
 def ask_words(open_file, first_language, second_language):
     first_word = input(MESSAGES["ask_word_nontranslated"].format(first_language))
@@ -203,20 +204,31 @@ def ask_wich_list_file():
         list_file += ".wdl"
     return list_file
 
+def get_print_all_lines(list_file):
+    open_file = open(list_file)
+    all_lines, first_language, second_language = import_lines(open_file)
+    open_file.close()
+    print_all_lines(all_lines)
+    return all_lines, first_language, second_language
+
 def import_lines(open_file):
-    all_lines = []
-    for line in open_file:
-        all_lines.append(line.rstrip("\n"))
-    first_language, second_language = all_lines[0].split("=")
-    second_language = second_language
-    del all_lines[0]
+    all_lines = {}
+    count = 0
+    for line in open_file.readlines():
+        if count == 0:
+            first_language, second_language = line.split("=")
+            second_language = second_language.strip("\n")
+        else:
+            first_word, second_word = line.split("=")
+            all_lines[first_word] = second_word.strip("\n")
+        count += 1
     return all_lines, first_language, second_language
 
 def print_all_lines(all_lines):
     clear()
     line_number = 1
-    for line in all_lines:
-        print(str(line_number) + ": " + line)
+    for key, value in all_lines.items():
+        print(str(line_number) + ": " + key + " = " + value)
         line_number += 1
 
 def ask_line_to_change(all_lines):
@@ -234,18 +246,18 @@ def ask_line_to_change(all_lines):
 def replace_line(all_lines, line_to_change, open_file, first_language, second_language):
     open_file.write(first_language + "=" + second_language + "\n")
     line_number = 0
-    for line in all_lines:
+    for key, value in all_lines.items():
         if line_number == line_to_change:
             clear()
             ask_words(open_file, first_language, second_language)
         else:
-            open_file.write(line + "\n")
+            open_file.write(key + "=" + value + "\n")
         line_number += 1
 
 def write_old_lines(all_lines, open_file, first_language, second_language):
     open_file.write(first_language + "=" + second_language + "\n")
-    for line in all_lines:
-        open_file.write(line + "\n")
+    for key, value in all_lines.items():
+        open_file.write(key + "=" + value + "\n")
 
 def ask_language_order(first_language, second_language):
     order = ""
@@ -265,11 +277,12 @@ def ask_language_order(first_language, second_language):
 def ask_meanings(all_lines, language_to_ask, reverse_ask):
     asked_meanings = []
     while len(asked_meanings) != len(all_lines):
-        line = random.randint(0, len(all_lines) - 1)
-        while line in asked_meanings:
-            line = random.randint(0, len(all_lines) - 1)
-        value, answer = all_lines[line].split("=")
-        if reverse_ask == True:
+        value = random.choice(list(all_lines))
+        answer = all_lines[value]
+        while value + "=" + answer in asked_meanings:
+            value = random.choice(list(all_lines))
+            answer = all_lines[value]
+        if reverse_ask:
             answer_temp = value
             value = answer
             answer = answer_temp
@@ -278,7 +291,10 @@ def ask_meanings(all_lines, language_to_ask, reverse_ask):
         if answer_to_check == answer:
             print(MESSAGES["keep_it_up"])
             time.sleep(1)
-            asked_meanings.append(line)
+            if reverse_ask:
+                asked_meanings.append(answer + "=" + value)
+            else:
+                asked_meanings.append(value + "=" + answer)
         else:
             print(MESSAGES["wrong"].format(answer))
             time.sleep(sleep_time)
@@ -306,8 +322,7 @@ def main():
 
 def make_list():
     filename = make_filename()
-    open_file = open(filename, "w")
-    first_language, second_language = ask_languages(open_file)
+    first_language, second_language, open_file = ask_languages(filename)
     clear()
     when_to_break = ask_words(open_file, first_language, second_language)
     while when_to_break != "/S":
@@ -320,10 +335,7 @@ def change_list():
     if list_file == "/S":
         return
     while True:
-        open_file = open(list_file)
-        all_lines, first_language, second_language = import_lines(open_file)
-        open_file.close()
-        print_all_lines(all_lines)
+        all_lines, first_language, second_language = get_print_all_lines(list_file)
         line_to_change = ask_line_to_change(all_lines)
         if line_to_change == "/S":
             break
@@ -337,10 +349,7 @@ def add_to_list():
         return
     s_to_stop = ""
     while s_to_stop != "/S":
-        open_file = open(list_file)
-        all_lines, first_language, second_language = import_lines(open_file)
-        open_file.close()
-        print_all_lines(all_lines)
+        all_lines, first_language, second_language = get_print_all_lines(list_file)
         open_file = open(list_file, "w")
         write_old_lines(all_lines, open_file, first_language, second_language)
         s_to_stop = ask_words(open_file, first_language, second_language)
